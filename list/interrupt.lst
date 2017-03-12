@@ -1,0 +1,115 @@
+C51 COMPILER V7.50   INTERRUPT                                                             03/09/2017 16:51:50 PAGE 1   
+
+
+C51 COMPILER V7.50, COMPILATION OF MODULE INTERRUPT
+OBJECT MODULE PLACED IN .\output\interrupt.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE src\interrupt.c BROWSE INCDIR(C:\Documents and Settings\Administrator\桌面\
+                    -xmj\env_monitoring\inc\) DEBUG OBJECTEXTEND PRINT(.\list\interrupt.lst) OBJECT(.\output\interrupt.obj)
+
+line level    source
+
+   1          #include"mydefine.h"
+   2          /*
+   3          中断0的中断号是0，定时器0的中断号是1，
+   4          外部中断1的中断号是2，定时器1的中断号是3
+   5          
+   6          */
+   7          timer0_interrupt() interrupt 1 using 1   //定时器0 的入口编号
+   8          {
+   9   1              SET_HTIME0_PARA(FOSC,10)
+  10   1              time_cnt++;
+  11   1              if(0 == time_cnt%20)
+  12   1                      B20ms = ~B20ms;
+  13   1              if(100 == time_cnt)
+  14   1              {
+  15   2                      time_cnt=0;
+  16   2                      B1s=~B1s;
+  17   2                      second++;               
+  18   2              }
+  19   1      
+  20   1      
+  21   1              //-------处理扬声器
+  22   1              if(off == speaker_state) 
+  23   1              {
+  24   2                      SPEAKER = 1;
+  25   2                      return; //off状态提前返回
+  26   2              }
+  27   1              switch(speaker_type)
+  28   1              {
+  29   2                      
+  30   2                      case temperature:
+  31   2                                      if(0 == time_cnt%20)    SPEAKER = ~SPEAKER;
+  32   2                              break;
+  33   2                      case light:
+  34   2                                      if(0 == time_cnt%60)    SPEAKER = ~SPEAKER;
+  35   2                              break;
+  36   2                      case voltage:
+  37   2                                      if(0 == time_cnt)       SPEAKER = ~SPEAKER;
+  38   2                              break;
+  39   2                      default: break;
+  40   2              }
+  41   1      }
+  42          
+  43          key_interrut() interrupt 2 using 2 
+  44          {
+  45   1              uchar temp,temp_data;
+  46   1              if(!KEYSIG)
+  47   1              {       
+  48   2                      delayms(20);
+  49   2                      if(!KEYSIG)
+  50   2                      {
+  51   3                              temp = XBYTE[0x8000]; //d15 为高
+  52   3                              switch(temp & 0x0f)
+  53   3                              {
+  54   4                                      case 0x0e: //MODKEY
+C51 COMPILER V7.50   INTERRUPT                                                             03/09/2017 16:51:50 PAGE 2   
+
+  55   4                                              mod_key_cnt++;
+  56   4                                              modify_falg = yes; //修改修改标记
+  57   4                                              speaker(off,0);
+  58   4                                              break;
+  59   4                                              
+  60   4                                      case 0x0d:      //RLKEY
+  61   4                                              if(no == modify_falg) break; //没有修改标志什么都不做
+  62   4                                              postion_cnt++;
+  63   4                                              break;
+  64   4                                              
+  65   4                                      case 0x0b:      //ASKEY
+  66   4                                              if(no == modify_falg) break; //没有修改标志什么都不做
+  67   4                                              temp_data = XBYTE[TEMP_LIMIT_ADR + (mod_key_cnt%3)*Length +postion_cnt%3 + 1];
+  68   4                                              if( ++temp_data > 9)
+  69   4                                                      temp_data = 0;
+  70   4                                              XBYTE[TEMP_LIMIT_ADR + (mod_key_cnt%3)*Length + postion_cnt%3 + 1] = temp_data;                                         
+  71   4                                              break;
+  72   4                                              
+  73   4                                      case 0x07: //OKKEY
+  74   4                                              mod_key_cnt = 0;
+  75   4                                              postion_cnt = 0;
+  76   4                                              modify_falg = no;//关闭修改标记 
+  77   4                                              save_flag = yes;
+  78   4                                              //save_limit_val_to_rom();
+  79   4                                              break;
+  80   4                                              
+  81   4                                      default: break; //可能会有其他值 但是什么都不做为好
+  82   4                                              
+  83   4                              }
+  84   3      
+  85   3                      }               
+  86   2              }               
+  87   1      }
+  88          
+  89          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    262    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

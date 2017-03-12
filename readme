@@ -1,0 +1,12 @@
+多功能环境监控是从出口项目捷克LED显示屏监控部分选择而来。主要实现环境参数（温度、亮度、电压）的采集与显示，和通过键盘实现环境参数的报警设置的功能。
+目前已完结！
+------------------------
+更新提示
+…or create a new repository on the command line
+
+echo "# env_monitoring" >> README.md
+git init
+git add README.md
+git commit -m "first commit"
+git remote add origin git@github.com:Renths/env_monitoring.git
+git push -u origin master

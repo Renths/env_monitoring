@@ -1,0 +1,505 @@
+C51 COMPILER V7.50   MAIN                                                                  03/09/2017 16:51:49 PAGE 1   
+
+
+C51 COMPILER V7.50, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\output\main.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE main.c BROWSE INCDIR(C:\Documents and Settings\Administrator\桌面\xmj\env_m
+                    -onitoring\inc\) DEBUG OBJECTEXTEND PRINT(.\list\main.lst) OBJECT(.\output\main.obj)
+
+line level    source
+
+   1          #include "mydefine.h"
+   2          
+   3          
+   4          
+   5          
+   6          
+   7          void delayms(int num)
+   8          {
+   9   1              uchar i,j,k;
+  10   1              for(i=0; i<num; i++)
+  11   1                      for(j=0; j<80; j++)
+  12   1                              for(k=0; k<10; k++)
+  13   1                              ;
+  14   1      }
+  15          
+  16          
+  17          /*
+  18          只是将温度阻值特性表从code代码中copy到了外部RAM中，只要不做修改
+  19          应该是可以省略的
+  20          */
+  21          void cp_temperature_tab2ram(void)
+  22          {
+  23   1              uint i;
+  24   1              for(i=0; i<sizeof(float)*temperature_tab_len; i++)
+  25   1              {
+  26   2                      XBYTE[TEMP_TAB_ADDR_START + sizeof(float)*i] = temperature_tab[i];
+  27   2              }
+  28   1              
+  29   1      }
+  30          
+  31          
+  32          void read_limit_val_to_ram()
+  33          {
+  34   1              Write_Num_Byte((uchar *)TEMP_LIMIT_ADR,Length*3,TEMP_LIMIT_ROM_ADR);
+  35   1              
+  36   1      #if 0
+                      uchar i;
+                      //读取温度限制值
+                      for(i=0;i<Length;i++)
+                      {
+                              XBYTE[TEMP_LIMIT_ADR+i] = iic_read(BRT_LIMIT_ROM_ADR+2);
+                      }
+                      
+                      //读取亮度
+                      for(i=0;i<Length;i++)
+                      {
+                              XBYTE[BRT_LIMIT_ADR+i] = iic_read(BRT_LIMIT_ROM_ADR+2);
+                              //XBYTE[BRT_LIMIT_ADR+i] = iic_read(BRT_LIMIT_ROM_ADR+i);
+                      }
+                      
+                      //读取电压
+                      for(i=0;i<Length;i++)
+                      {
+                              XBYTE[VCC_LIMIT_ADR+i] = iic_read(BRT_LIMIT_ROM_ADR+2);
+C51 COMPILER V7.50   MAIN                                                                  03/09/2017 16:51:49 PAGE 2   
+
+                              //XBYTE[VCC_LIMIT_ADR+i] = iic_read(VCC_LIMIT_ROM_ADR+i);
+                      }
+              #endif  
+  58   1      }
+  59          
+  60          
+  61          void save_limit_val_to_rom()
+  62          {
+  63   1              Read_N_Bytes((uchar*)TEMP_LIMIT_ADR,Length*3,TEMP_LIMIT_ROM_ADR);
+  64   1      #if 0
+                      uchar i;
+                      //保存温度限制值
+                      for(i=0; i<Length; i++)
+                      {
+                              iic_write(TEMP_LIMIT_ROM_ADR+i, XBYTE[TEMP_LIMIT_ADR+i]);
+                      }
+                      
+                      //保存亮度
+                      for(i=0; i<Length; i++)
+                      {
+                              iic_write(BRT_LIMIT_ROM_ADR+i, XBYTE[BRT_LIMIT_ADR+i]);
+                      }
+                      
+                      //保存电压
+                      for(i=0; i<Length; i++)
+                      {
+                              iic_write(VCC_LIMIT_ROM_ADR+i, XBYTE[VCC_LIMIT_ADR+i]);
+                      }
+              #endif  
+  84   1      }
+  85          
+  86          
+  87          
+  88          /*
+  89          初始化 完成的工作:
+  90          1.将代码段数据读到外部ram中 code修饰的字段与程序代码相似为代码段  只读 
+  91          2.初始化定时器
+  92          定时器 中断等等开关
+  93          */
+  94          void init(void)
+  95          {
+  96   1               EA=0;
+  97   1               P1=P3=0XFF;
+  98   1               iic_init();
+  99   1      
+ 100   1      //#if 0  
+ 101   1               //手动修改数据  在后面中需要引用变量的方式
+ 102   1               XBYTE[DISPADR+0]=0X0; //在显示缓冲中 存放的是数码管的段码
+ 103   1               XBYTE[DISPADR+1]=0X0;  //其他的数据通过段码数据转换
+ 104   1               XBYTE[DISPADR+2]=0X0;
+ 105   1               XBYTE[DISPADR+3]=0X0;
+ 106   1      
+ 107   1               XBYTE[TEMPADR+0]=0X0;  //在其他的缓冲中主要是放的10进制数据 一个字节放一位数
+ 108   1               /*XBYTE[TEMPADR+1]=0X3;        //有点浪费
+ 109   1               XBYTE[TEMPADR+2]=0X3;
+ 110   1               XBYTE[TEMPADR+3]=0X3;*/
+ 111   1      
+ 112   1               XBYTE[BRTADR+0]=0X1;
+ 113   1               /*XBYTE[BRTADR+1]=0X0;
+ 114   1               XBYTE[BRTADR+2]=0X0;
+ 115   1               XBYTE[BRTADR+3]=0X1;*/
+ 116   1      
+C51 COMPILER V7.50   MAIN                                                                  03/09/2017 16:51:49 PAGE 3   
+
+ 117   1               XBYTE[VCCADR+0]=0X2;
+ 118   1              /* XBYTE[VCCADR+1]=0X4;
+ 119   1               XBYTE[VCCADR+2]=0X9;
+ 120   1               XBYTE[VCCADR+3]=0X5;*/
+ 121   1      
+ 122   1               //初始化各参数报警门限  ---在后期要求在EEROM中读取
+ 123   1               XBYTE[TEMP_LIMIT_ADR+0]=0X0;  //在其他的缓冲中主要是放的10进制数据 一个字节放一位数
+ 124   1               /*XBYTE[TEMP_LIMIT_ADR+1]=0X4; //有点浪费
+ 125   1               XBYTE[TEMP_LIMIT_ADR+2]=0X0;
+ 126   1               XBYTE[TEMP_LIMIT_ADR+3]=0X0;*/
+ 127   1      
+ 128   1               XBYTE[BRT_LIMIT_ADR+0]=0X1;
+ 129   1               /*XBYTE[BRT_LIMIT_ADR+1]=0X0;
+ 130   1               XBYTE[BRT_LIMIT_ADR+2]=0X0;
+ 131   1               XBYTE[BRT_LIMIT_ADR+3]=0X5;*/
+ 132   1      
+ 133   1               XBYTE[VCC_LIMIT_ADR+0]=0X2;
+ 134   1               /*XBYTE[VCC_LIMIT_ADR+1]=0X5;
+ 135   1               XBYTE[VCC_LIMIT_ADR+2]=0X0;
+ 136   1               XBYTE[VCC_LIMIT_ADR+3]=0X0;    */
+ 137   1      //#endif
+ 138   1               read_limit_val_to_ram();
+ 139   1               cp_temperature_tab2ram();
+ 140   1               
+ 141   1               TMOD=0X01;
+ 142   1               SET_HTIME0_PARA(FOSC,10)
+ 143   1               ET0=1;PT0=0;TR0=1;
+ 144   1               EA=1;
+ 145   1               
+ 146   1      
+ 147   1               //开外部中断1 用于按键中断
+ 148   1               EX1 = 1;
+ 149   1               IT1 = 1; // 1下降沿触发 0边沿触发
+ 150   1      }
+ 151          
+ 152          /*有源蜂鸣器
+ 153          */
+ 154          void speaker(uchar state,uchar type)
+ 155          {
+ 156   1              speaker_state = state;
+ 157   1              speaker_type = type;
+ 158   1                              
+ 159   1      }
+ 160          
+ 161          
+ 162          /*函数说明
+ 163          dis_mod 用来控制选择显示温度 亮度 还是 电压
+ 164          flash_postion 闪烁位置 取值范围为0~4
+ 165                  0 不闪烁
+ 166                  1~4对应位置闪烁
+ 167          */
+ 168          void display_flash(uchar dis_mod,uchar flash_postion)
+ 169          {
+ 170   1              uchar i,j,temp;
+ 171   1              /*    选择显示数据位 读  0温度位? 1亮度位?  2还是电压位?
+ 172   1              外部RAM地址     0~3          4~7       8~11     12~15
+ 173   1              宏定义的地址DISPADR        TEMPADR   BRTADR    VCCADR
+ 174   1              这个选择由dismod决定
+ 175   1              */
+ 176   1      
+ 177   1              //检查闪烁位置 如果不在范围内 不予显示  否则地址会指向其他地方造成段错误
+ 178   1              if(flash_postion <0 || flash_postion > 4)
+C51 COMPILER V7.50   MAIN                                                                  03/09/2017 16:51:49 PAGE 4   
+
+ 179   1                      flash_postion = 0;
+ 180   1              
+ 181   1              switch(dis_mod) 
+ 182   1              {
+ 183   2                      case temperature:
+ 184   2                      /*处理温度数据*/
+ 185   2                              XBYTE[DISPADR+0]=chartab[XBYTE[TEMP_LIMIT_ADR+0]];
+ 186   2                              XBYTE[DISPADR+1]=digital[XBYTE[TEMP_LIMIT_ADR+1]];
+ 187   2                              XBYTE[DISPADR+2]=digital_dot[XBYTE[TEMP_LIMIT_ADR+2]];
+ 188   2                              XBYTE[DISPADR+3]=digital[XBYTE[TEMP_LIMIT_ADR+3]];
+ 189   2                              if(1 == B20ms && flash_postion)
+ 190   2                                      XBYTE[DISPADR+flash_postion]=digital[10]; //灭
+ 191   2                      break;
+ 192   2                      case light:
+ 193   2                      /*处理亮度数据*/
+ 194   2                              XBYTE[DISPADR+0]=chartab[XBYTE[BRT_LIMIT_ADR+0]];
+ 195   2                              XBYTE[DISPADR+1]=digital[XBYTE[BRT_LIMIT_ADR+1]];
+ 196   2                              XBYTE[DISPADR+2]=digital[XBYTE[BRT_LIMIT_ADR+2]];
+ 197   2                          XBYTE[DISPADR+3]=digital[XBYTE[BRT_LIMIT_ADR+3]];
+ 198   2                              if(1 == B20ms && flash_postion)
+ 199   2                                      XBYTE[DISPADR+flash_postion]=digital[10]; //灭
+ 200   2                      break;
+ 201   2                      default :
+ 202   2                      /*处理电压数据*/
+ 203   2                              XBYTE[DISPADR+0]=chartab[XBYTE[VCC_LIMIT_ADR+0]];
+ 204   2                              XBYTE[DISPADR+1]=digital_dot[XBYTE[VCC_LIMIT_ADR+1]];
+ 205   2                              XBYTE[DISPADR+2]=digital[XBYTE[VCC_LIMIT_ADR+2]];
+ 206   2                          XBYTE[DISPADR+3]=digital[XBYTE[VCC_LIMIT_ADR+3]];
+ 207   2                              if(1 == B20ms && flash_postion)
+ 208   2                                      XBYTE[DISPADR+flash_postion]=digital[10]; //灭
+ 209   2                      break;
+ 210   2                      
+ 211   2              }
+ 212   1      
+ 213   1              //将串行数据送入到 串转并 
+ 214   1              for(i=0; i<Length; i++)
+ 215   1              {
+ 216   2                      temp=XBYTE[DISPADR+i];
+ 217   2                      for(j=0; j<8; j++)
+ 218   2                      {
+ 219   3                              CLK=0;CLK=1;
+ 220   3                      }
+ 221   2              }
+ 222   1              ST=1;ST=0; //给一个下降沿信号 4个串转并同时锁存 完成转换
+ 223   1              
+ 224   1      }
+ 225          
+ 226          
+ 227          
+ 228          #if 0
+              /*函数说明
+              dis_mod 用来控制选择显示温度 亮度 还是 电压
+              */
+              void display(const uchar dis_mod)
+              {
+                      uchar i,j,temp;
+                      /*    选择显示数据位 读  0温度位? 1亮度位?  2还是电压位?
+                      外部RAM地址     0~3          4~7       8~11     12~15
+                      宏定义的地址DISPADR        TEMPADR   BRTADR    VCCADR
+                      这个选择由dismod决定
+                      */
+                      switch(dis_mod) 
+C51 COMPILER V7.50   MAIN                                                                  03/09/2017 16:51:49 PAGE 5   
+
+                      {
+                              case temperature:
+                              /*处理温度数据*/
+                                      XBYTE[DISPADR+0]=chartab[XBYTE[TEMPADR+0]];
+                                      XBYTE[DISPADR+1]=digital[XBYTE[TEMPADR+1]];
+                                      XBYTE[DISPADR+2]=digital_dot[XBYTE[TEMPADR+2]];
+                                      XBYTE[DISPADR+3]=digital[XBYTE[TEMPADR+3]];
+                                      break;
+                              case light:
+                              /*处理亮度数据*/
+                                      XBYTE[DISPADR+0]=chartab[XBYTE[BRTADR+0]];
+                                      XBYTE[DISPADR+1]=digital[XBYTE[BRTADR+1]];
+                                      XBYTE[DISPADR+2]=digital[XBYTE[BRTADR+2]];
+                                  XBYTE[DISPADR+3]=digital[XBYTE[BRTADR+3]];
+                                      break;
+                              case voltage :
+                              /*处理电压数据*/
+                                      XBYTE[DISPADR+0]=chartab[XBYTE[VCCADR+0]];
+                                      XBYTE[DISPADR+1]=digital_dot[XBYTE[VCCADR+1]];
+                                      XBYTE[DISPADR+2]=digital[XBYTE[VCCADR+2]];
+                                  XBYTE[DISPADR+3]=digital[XBYTE[VCCADR+3]];
+                                      break;
+                              default: 
+                                      XBYTE[DISPADR+0]=digital[10]; //灭
+                                      XBYTE[DISPADR+1]=digital[10]; //灭
+                                      XBYTE[DISPADR+2]=digital[10]; //灭
+                                      XBYTE[DISPADR+3]=digital[10]; //灭
+                                      break;
+                              
+                      }
+              
+                      //将串行数据送入到 串转并 
+                      for(i=0;i<Length;i++)
+                      {
+                              temp=XBYTE[DISPADR+i];
+                              for(j=0;j<8;j++)
+                              {
+                                      CLK=0;CLK=1;
+                              }
+                      }
+                      ST=1;ST=0; //给一个下降沿信号 4个串转并同时锁存 完成转换
+                      
+              }
+              #endif
+ 285          
+ 286          void display(const uchar dis_mode )
+ 287          {
+ 288   1              uchar i,j,temp;
+ 289   1              switch(dis_mode)
+ 290   1              {
+ 291   2                      case 0:
+ 292   2                              XBYTE[DISPADR+0]=chartab[XBYTE[TEMPADR+0]];
+ 293   2                              XBYTE[DISPADR+1]=digital[XBYTE[TEMPADR+1]];
+ 294   2                              XBYTE[DISPADR+2]=digital_dot[XBYTE[TEMPADR+2]];
+ 295   2                              XBYTE[DISPADR+3]=digital[XBYTE[TEMPADR+3]];
+ 296   2                              break;
+ 297   2                      case 1:
+ 298   2                              XBYTE[DISPADR+0]=chartab[XBYTE[BRTADR+0]];
+ 299   2                              XBYTE[DISPADR+1]=digital[XBYTE[BRTADR+1]];
+ 300   2                              XBYTE[DISPADR+2]=digital[XBYTE[BRTADR+2]];
+ 301   2                          XBYTE[DISPADR+3]=digital[XBYTE[BRTADR+3]];
+ 302   2                              break;
+C51 COMPILER V7.50   MAIN                                                                  03/09/2017 16:51:49 PAGE 6   
+
+ 303   2                      default:
+ 304   2                              XBYTE[DISPADR+0]=chartab[XBYTE[VCCADR+0]];
+ 305   2                              XBYTE[DISPADR+1]=digital_dot[XBYTE[VCCADR+1]];
+ 306   2                              XBYTE[DISPADR+2]=digital[XBYTE[VCCADR+2]];
+ 307   2                          XBYTE[DISPADR+3]=digital[XBYTE[VCCADR+3]];
+ 308   2                              break;
+ 309   2              }
+ 310   1      
+ 311   1              //将串行数据送入到 串转并 
+ 312   1              for(i=0;i<Length;i++)
+ 313   1              {
+ 314   2                      temp=XBYTE[DISPADR+i];
+ 315   2                      for(j=0;j<8;j++)
+ 316   2                      {
+ 317   3                              CLK=0;CLK=1;
+ 318   3                      }
+ 319   2              }
+ 320   1              ST=1;ST=0; //给一个下降沿信号 4个串转并同时锁存 完成转换
+ 321   1      }
+ 322          
+ 323          
+ 324          
+ 325          //功能 判断检测的值是否有大于 设置好了的限制值
+ 326          void monitor(void)
+ 327          {
+ 328   1              //读数据
+ 329   1              uint temper_current,light_current,voltage_currnt;
+ 330   1              uint temper_limit,light_limit,voltage_limit;
+ 331   1              temper_current = GET_RAM_VLA(TEMPADR);
+ 332   1              light_current = GET_RAM_VLA(BRTADR);
+ 333   1              voltage_currnt = GET_RAM_VLA(VCCADR);
+ 334   1      
+ 335   1              temper_limit = GET_RAM_VLA(TEMP_LIMIT_ADR);
+ 336   1              light_limit = GET_RAM_VLA(BRT_LIMIT_ADR);
+ 337   1              voltage_limit = GET_RAM_VLA(VCC_LIMIT_ADR);
+ 338   1      
+ 339   1              //比较数据 注意 数据以在原来的基础上放大了10倍 去掉了小数点后一位
+ 340   1              if((temper_current >= temper_limit)  
+ 341   1                      || (light_current >= light_limit)
+ 342   1                      || (voltage_currnt >= voltage_limit))
+ 343   1              {
+ 344   2                      if(temper_current >= temper_limit) speaker(on,temperature);
+ 345   2                      else if(light_current >= light_limit) speaker(on,light);
+ 346   2                      else if(voltage_currnt >= voltage_limit) speaker(on,voltage);
+ 347   2              }
+ 348   1              else speaker(off,0);
+ 349   1              
+ 350   1      }
+ 351          
+ 352          
+ 353          uchar check_table(const float *temp)
+ 354          {
+ 355   1              uchar i;
+ 356   1              uint retval;
+ 357   1              for(i=0; i<sizeof(float)*temperature_tab_len; i++)
+ 358   1              {
+ 359   2                      if(*temp >= temperature_tab[i])
+ 360   2                      {
+ 361   3                              retval = i*5 + 
+ 362   3                                      ( (*temp - temperature_tab[i])/ //分子
+ 363   3                                      (temperature_tab[i]-temperature_tab[i+1])/*分母*/)*5; /*中间占比部分*/
+ 364   3                              //本来是0.5 放大了10倍 返回的值也是放大了10倍
+C51 COMPILER V7.50   MAIN                                                                  03/09/2017 16:51:49 PAGE 7   
+
+ 365   3                              //比如 实际值为25.5度  但是返回了255
+ 366   3                              break;
+ 367   3                      }
+ 368   2                      
+ 369   2              }
+ 370   1              return retval;
+ 371   1              
+ 372   1      }
+ 373          void read_adc(uchar select)
+ 374          {
+ 375   1              uchar temp;
+ 376   1              uint changed_val;
+ 377   1              double Vres15,Ires15,Res14;
+ 378   1              temp =adc(select);
+ 379   1              //将ad数值转换成物理单位参考值 精确度一点都不高
+ 380   1              switch(select)
+ 381   1              {
+ 382   2                      case temperature:
+ 383   2                              //求 R14电阻
+ 384   2                              Vres15 = (5.0/256.0) * temp;
+ 385   2                              Ires15 = Vres15 /(10.0*1000.0);
+ 386   2                              Res14 = (5.0-Vres15) / Ires15;
+ 387   2                              Res14 = Res14/1000.0;
+ 388   2                              //查表
+ 389   2                              changed_val = check_table(&Res14);
+ 390   2                              break;
+ 391   2                      case light://要求0~9个亮度级别 实际测量最大ad值193 最小ad值143 每5个变换值表示一个亮度级别。
+ 392   2                              changed_val = (temp-143)/5;
+ 393   2                              break;
+ 394   2                      case voltage://假设传感器为线性 参考电压为5V ad在0~255变换
+ 395   2                              changed_val = (500/255) * temp; //放大了100倍对应显示小数点后两位
+ 396   2                              break;
+ 397   2              }
+ 398   1              XBYTE[TEMPADR+select*Length +1] = changed_val/100;
+ 399   1              XBYTE[TEMPADR+select*Length +2] = (changed_val/10)%10;
+ 400   1              XBYTE[TEMPADR+select*Length +3] = (changed_val%100)%10;
+ 401   1      }
+ 402          int main(void)
+ 403          {
+ 404   1              volatile uchar temp_conut = 0;
+ 405   1              init(); 
+ 406   1              while(1)
+ 407   1              {
+ 408   2                      
+ 409   2                      //正常显示
+ 410   2                      if(no==modify_falg)
+ 411   2                      {
+ 412   3                              read_adc(temperature);
+ 413   3                              monitor();//监控值是否超过变化 
+ 414   3                              display(temperature);
+ 415   3                              while(0 != time_cnt) //只是起一个延时1s作用
+ 416   3                                      if(yes == modify_falg) goto flash;
+ 417   3                              time_cnt++;//主动加一 
+ 418   3                              
+ 419   3                              
+ 420   3                              read_adc(light);
+ 421   3                              monitor();//监控值是否超过变化 
+ 422   3                              display(light);
+ 423   3                              while(0 != time_cnt)
+ 424   3                                      if(yes == modify_falg) goto flash;
+ 425   3                              time_cnt++;
+ 426   3                              
+C51 COMPILER V7.50   MAIN                                                                  03/09/2017 16:51:49 PAGE 8   
+
+ 427   3      
+ 428   3                              read_adc(voltage);
+ 429   3                              monitor();//监控值是否超过变化 
+ 430   3                              display(voltage);
+ 431   3                              while(0 != time_cnt)
+ 432   3                                      if(yes == modify_falg) goto flash;
+ 433   3                              time_cnt++;
+ 434   3                              
+ 435   3                              
+ 436   3                              #if 0  // 已解决
+                                      if(0 == B1s)
+                                      {       
+                                              B1s = ~B1s;
+                                              delayms(1);//短暂延时 减缓CPU负载
+                                              read_adc(temp_conut);
+                                              monitor();//监控值是否超过变化 
+                                              //没过1s循环显示数据 并检查是否超过限制
+                                              display(temp_conut);    
+                                              temp_conut++;
+                                              if(temp_conut > 3) temp_conut = 0;
+                                              
+                                      }
+                                      #endif
+ 450   3                      }
+ 451   2                      else
+ 452   2                      {
+ 453   3      flash:
+ 454   3                              //闪烁修改值
+ 455   3                              speaker(off,0);
+ 456   3                              display_flash(mod_key_cnt%3,postion_cnt%3+1);
+ 457   3                              
+ 458   3                      }
+ 459   2                      if(yes == save_flag )
+ 460   2                      {
+ 461   3                              save_flag =no;
+ 462   3                              save_limit_val_to_rom();
+ 463   3                      }
+ 464   2                      
+ 465   2              }
+ 466   1              return 0;
+ 467   1      }       
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1557    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      37
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
